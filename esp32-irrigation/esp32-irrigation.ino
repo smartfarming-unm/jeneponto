@@ -25,6 +25,8 @@ const int daylightOffset_sec = 0;
 // Pin Pompa (PWM)
 //-------------------------------------------
 int pwmPin = 25;
+int pwmValue = 0;
+bool pumpRunning = false;
 
 //-------------------------------------------
 // Threshold
@@ -116,7 +118,7 @@ void loop() {
   bool kondisiLembab = (kelembaban >= thresholdKelembaban);
 
   //  Rentang waktu penyiraman: 06:00 – 09:00
-  bool waktuPenyiraman = (jam >= 6 && jam < 23);
+  bool waktuPenyiraman = (jam >= 6 && jam < 24);
 
   if (waktuPenyiraman) {
 
@@ -126,21 +128,38 @@ void loop() {
     if (kondisiHujan) {
       Serial.println("Hujan terdeteksi. Pompa OFF.");
       analogWrite(pwmPin, 0);
+      pumpRunning = false;
     }
     else if (kondisiLembab) {
       Serial.println("Kelembaban tanah sudah cukup. Pompa OFF.");
       analogWrite(pwmPin, 0);
+      pumpRunning = false;
     }
     else {
       // Tidak hujan & tanah tidak lembab ⇒ nyalakan pompa
-      Serial.println("Tidak hujan & tanah kering. Pompa ON.");
-      analogWrite(pwmPin, 255);
+      if (!pumpRunning) {
+        Serial.println("Tidak hujan & tanah kering. Pompa ON");
+
+        for (pwmValue = 0; pwmValue <= 255; pwmValue++) {
+          analogWrite(pwmPin, pwmValue);
+          Serial.print("PWM: ");
+          Serial.println(pwmValue);
+          delay(20);   // kecepatan naik
+        }
+
+        pumpRunning = true;  // tandai pompa sudah ON
+      } 
+      else {
+        // Pompa sudah ON → tetap pada 255
+        analogWrite(pwmPin, 255);
+      }
     }
 
   } else {
     // Di luar rentang waktu -> pompa harus OFF
     Serial.println("Di luar jam penyiraman (Pompa OFF).");
     analogWrite(pwmPin, 0);
+    pumpRunning = false;
   }
 
   Serial.println("-------------------------------------------------------------------");
